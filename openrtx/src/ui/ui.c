@@ -76,6 +76,7 @@
 #include <battery.h>
 #include <input.h>
 #include <hwconfig.h>
+#include "core/voicePromptUtils.h"
 
 /* UI main screen functions, their implementation is in "ui_main.c" */
 extern void _ui_drawMainBackground();
@@ -576,6 +577,7 @@ void _ui_fsm_confirmVFOInput(bool *sync_rtx)
         ui_state.input_set = SET_TX;
         // Reset input position
         ui_state.input_position = 0;
+		announceInputReceiveOrTransmit(true, (vpqInit | vpqPlayImmediately));
     }
     else if(ui_state.input_set == SET_TX)
     {
@@ -592,7 +594,10 @@ void _ui_fsm_confirmVFOInput(bool *sync_rtx)
             state.channel.rx_frequency = ui_state.new_rx_frequency;
             state.channel.tx_frequency = ui_state.new_tx_frequency;
             *sync_rtx = true;
+			announceFrequencies(state.channel.rx_frequency, state.channel.tx_frequency, (vpqInit | vpqPlayImmediately));
         }
+		else
+			announceError();
         state.ui_screen = MAIN_VFO;
     }
 }
@@ -895,7 +900,7 @@ void _ui_textInputKeypad(char *buf, uint8_t max_len, kbd_msg_t msg, bool callsig
         {
             ui_state.input_set = (ui_state.input_set + 1) % num_symbols;
         }
-        // Differnt key pressed: save current char and change key
+        // Different key pressed: save current char and change key
         else
         {
             ui_state.input_position += 1;
@@ -906,7 +911,11 @@ void _ui_textInputKeypad(char *buf, uint8_t max_len, kbd_msg_t msg, bool callsig
     if(callsign)
         buf[ui_state.input_position] = symbols_ITU_T_E161_callsign[num_key][ui_state.input_set];
     else
+	{
         buf[ui_state.input_position] = symbols_ITU_T_E161[num_key][ui_state.input_set];
+	}
+	// Announce the character
+	AnnounceInputChar(buf[ui_state.input_position]);
     // Update reference values
     ui_state.input_number = num_key;
     ui_state.last_keypress = now;
@@ -922,8 +931,11 @@ void _ui_textInputDel(char *buf)
     buf[ui_state.input_position] = '\0';
     // Move back input cursor
     if(ui_state.input_position > 0)
+	{
         ui_state.input_position--;
+		AnnounceInputChar(buf[ui_state.input_position]);
     // If we deleted the initial character, reset starting condition
+	}
     else
         ui_state.last_keypress = 0;
     ui_state.input_set = 0;
@@ -996,6 +1008,7 @@ void ui_updateFSM(bool *sync_rtx)
                         state.channel.rx_frequency += 12500;
                         state.channel.tx_frequency += 12500;
                         *sync_rtx = true;
+						announceFrequencies(state.channel.rx_frequency, state.channel.tx_frequency, (vpqInit | vpqPlayImmediately));
                     }
                 }
                 else if(msg.keys & KEY_DOWN || msg.keys & KNOB_LEFT)
@@ -1007,6 +1020,7 @@ void ui_updateFSM(bool *sync_rtx)
                         state.channel.rx_frequency -= 12500;
                         state.channel.tx_frequency -= 12500;
                         *sync_rtx = true;
+						announceFrequencies(state.channel.rx_frequency, state.channel.tx_frequency, (vpqInit | vpqPlayImmediately));
                     }
                 }
                 else if(msg.keys & KEY_ENTER)
@@ -1015,6 +1029,7 @@ void ui_updateFSM(bool *sync_rtx)
                     ui_state.last_main_state = state.ui_screen;
                     // Open Menu
                     state.ui_screen = MENU_TOP;
+					// ToDo announce the menu name and selected item.
                 }
                 else if(msg.keys & KEY_ESC)
                 {
@@ -1026,12 +1041,15 @@ void ui_updateFSM(bool *sync_rtx)
                     {
                         // Switch to MEM screen
                         state.ui_screen = MAIN_MEM;
+						// anounce the active channel name.
+						announceChannelName(&state.channel, state.channel_index, (vpqInit | vpqPlayImmediately));
                     }
                 }
                 else if(msg.keys & KEY_F1)
                 {
                     // Switch to Digital Mode VFO screen
                     state.ui_screen = MODE_VFO;
+					announceVFO();
                 }
                 else if(input_isNumberPressed(msg))
                 {
@@ -1040,10 +1058,14 @@ void ui_updateFSM(bool *sync_rtx)
                     // Reset input position and selection
                     ui_state.input_position = 1;
                     ui_state.input_set = SET_RX;
+					// do not play  because we will also announce the number just entered.
+					announceInputReceiveOrTransmit(false, vpqInit);
                     ui_state.new_rx_frequency = 0;
                     ui_state.new_tx_frequency = 0;
                     // Save pressed number to calculare frequency and show in GUI
                     ui_state.input_number = input_getPressedNumber(msg);
+					vpQueueInteger(ui_state.input_number);
+					vpPlay();
                     // Calculate portion of the new frequency
                     ui_state.new_rx_frequency = _ui_freq_add_digit(ui_state.new_rx_frequency,
                                             ui_state.input_position, ui_state.input_number);
@@ -1063,9 +1085,15 @@ void ui_updateFSM(bool *sync_rtx)
                 else if(msg.keys & KEY_UP || msg.keys & KEY_DOWN)
                 {
                     if(ui_state.input_set == SET_RX)
+					{
                         ui_state.input_set = SET_TX;
+						announceInputReceiveOrTransmit(true, (vpqInit | vpqPlayImmediately));
+					}
                     else if(ui_state.input_set == SET_TX)
+					{
                         ui_state.input_set = SET_RX;
+						announceInputReceiveOrTransmit(false, (vpqInit | vpqPlayImmediately));
+					}
                     // Reset input position
                     ui_state.input_position = 0;
                 }
