@@ -1167,7 +1167,7 @@ void ui_updateFSM(bool *sync_rtx)
 					if (state.settings.vpLevel > vpBeep)
 					{// quick press repeat vp, long press summary.
 						if (msg.long_press)
-							announceChannelSummary(&state.channel, 0);
+							announceChannelSummary(&state.channel, 0, state.bank);
 						else
 							ReplayLastPrompt();
 						f1Handled = true;
@@ -1249,7 +1249,7 @@ void ui_updateFSM(bool *sync_rtx)
 					if (state.settings.vpLevel > vpBeep)
 					{// quick press repeat vp, long press summary.
 						if (msg.long_press)
-							announceChannelSummary(&state.channel, state.channel_index);
+							announceChannelSummary(&state.channel, state.channel_index, state.bank);
 						else
 							ReplayLastPrompt();
 						f1Handled=true;
@@ -1462,7 +1462,7 @@ void ui_updateFSM(bool *sync_rtx)
                 else if(msg.keys & KEY_ESC)
                     _ui_menuBack(ui_state.last_main_state);
                 break;
-            // Zone menu screen
+            // Bank menu screen
             case MENU_BANK:
             // Channel menu screen
             case MENU_CHANNEL:
@@ -1939,7 +1939,7 @@ void ui_updateGUI()
         case MENU_TOP:
             _ui_drawMenuTop(&ui_state);
             break;
-        // Zone menu screen
+        // Bank menu screen
         case MENU_BANK:
             _ui_drawMenuBank(&ui_state);
             break;
