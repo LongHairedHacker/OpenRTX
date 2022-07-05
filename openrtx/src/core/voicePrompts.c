@@ -92,7 +92,7 @@ int vp_open(char *vp_name)
 {
     if (!vp_name)
         vp_name = "voiceprompts.vpc";
-    voice_prompt_file = fopen(vp_name, "r+");
+    voice_prompt_file = fopen(vp_name, "r");
     if (!voice_prompt_file)
         return -1;
     return 0;
@@ -121,7 +121,7 @@ void vpCacheInit(void)
     {                            // read in the TOC.
         fread((void*)&tableOfContents, sizeof(tableOfContents), 1, voice_prompt_file);
 vpDataOffset = ftell(voice_prompt_file);
-        vpDataIsLoaded = true;
+        vpDataIsLoaded = vpDataOffset == (sizeof(voicePromptsDataHeader_t) + sizeof(tableOfContents));
     }
     if (vpDataIsLoaded)
     {  // if the hash key is down, set vpLevel to high, if beep or less.
