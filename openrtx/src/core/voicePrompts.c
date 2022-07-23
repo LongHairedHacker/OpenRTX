@@ -110,13 +110,13 @@ void vpCacheInit(void)
 {
     voicePromptsDataHeader_t header;
     vpDataOffset=0;
-	
+
     if (!voice_prompt_file)
         vp_open(NULL);
-	
+
     if (!voice_prompt_file)
         return;
-	
+
     fseek(voice_prompt_file, 0L, SEEK_SET);
     fread((void*)&header, sizeof(header), 1, voice_prompt_file);
 
@@ -150,19 +150,21 @@ static void GetCodec2Data(int offset, int length)
 {
     if (!voice_prompt_file || (vpDataOffset < (sizeof(voicePromptsDataHeader_t) + sizeof(tableOfContents))))
         return;
-	
     if ((offset < 0) || (length > Codec2DataBufferSize))
         return;
-    
+
+    // TODO: Implement LFS file read
+    #ifdef PLATFORM_LINUX
     fseek(voice_prompt_file, vpDataOffset+offset, SEEK_SET);
     fread((void*)&Codec2Data, length, 1, voice_prompt_file);
-    // zero buffer from length to the next multiple of 8 to avoid garbage 
+    // zero buffer from length to the next multiple of 8 to avoid garbage
     // being played back, since codec2 frames are pushed in lots of 8 bytes.
     if ((length % 8) != 0)
 	{
         int bytesToZero = length % 8;
         memset(Codec2Data+length, 0, bytesToZero);
     }
+    #endif
 }
 
 void vpTerminate(void)
@@ -348,24 +350,23 @@ void vpQueueStringTableEntry(const char* const* stringTableStringPtr)
 
 void vpPlay(void)
 {
-    if (state.settings.vpLevel < vpLow) return;
-
-    if (voicePromptIsActive) return;
-	
-    if (vpCurrentSequence.length <= 0) return;
-	
-    voicePromptIsActive = true;  // Start the playback
-	
+    if (state.settings.vpLevel < vpLow)
+        return;
+    if (voicePromptIsActive)
+        return;
+    if (vpCurrentSequence.length <= 0)
+        return;
+    // Start the playback
+    voicePromptIsActive = true;
     codec_startDecode(SINK_SPK);
-	
     audio_enableAmp();
 }
 
 // Call this from the main timer thread to continue voice prompt playback.
 void vpTick()
 {
-    if (!voicePromptIsActive) return;
-	
+    if (!voicePromptIsActive)
+        return;
     while (vpCurrentSequence.pos < vpCurrentSequence.length)
     {// get the codec2 data for the current prompt if needed.
         if (vpCurrentSequence.codec2DataLength == 0)
@@ -374,9 +375,7 @@ void vpTick()
 
             vpCurrentSequence.codec2DataLength =
             tableOfContents[promptNumber + 1] - tableOfContents[promptNumber];
-			
             GetCodec2Data(tableOfContents[promptNumber], vpCurrentSequence.codec2DataLength);
-			
             vpCurrentSequence.codec2DataIndex = 0;
         }
         // push  the codec2 data in lots of 8 byte frames.
