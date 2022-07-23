@@ -47,27 +47,29 @@ static enum BufMode  buf_mode;                      // Buffer operation mode
 static stream_sample_t *buf            = NULL;      // Playback buffer
 static size_t        buf_len           = 0;         // Buffer length
 static bool          first_half_active = true; // Circular addressing mode flag
+static size_t        offset            = 0;         // Playback offset
 
 static void buf_circ_write_cb(pa_stream *s, size_t length, void *userdata)
 {
     (void) userdata;
-    // TODO: We can play length more bytes of data
-    // Start playback of the other half
-    stream_sample_t *active_buf = (first_half_active) ?
-        buf : buf + buf_len / 2;
-    first_half_active = !first_half_active;
-    size_t active_buf_len = buf_len / 2;
+    size_t remaining = 0;
 
     if (!s || length <= 0)
         return;
 
-    if (pa_stream_begin_write(s, (void **) &active_buf, &active_buf_len) < 0)
-    {
-        fprintf(stderr, "pa_stream_begin_write() failed: %s", pa_strerror(pa_context_errno(p->context)));
-        return;
-    }
+    if (offset >= buf_len / 2)
+        first_half_active = false;
 
-    pa_stream_write(s, active_buf, active_buf_len, NULL, 0, PA_SEEK_RELATIVE);
+    // We can play length more bytes of data
+    if (length > (buf_len - offset))
+    {
+        remaining = buf_len - offset;
+        pa_stream_write(s, buf + offset, remaining, NULL, 0, PA_SEEK_RELATIVE);
+        first_half_active = true;
+        offset = 0;
+    }
+    pa_stream_write(s, buf + offset, length - remaining, NULL, 0, PA_SEEK_RELATIVE);
+    offset += length - remaining;
 }
 
 streamId outputStream_start(const enum AudioSink destination,
@@ -124,6 +126,12 @@ streamId outputStream_start(const enum AudioSink destination,
     {
         assert(p->stream && "Invalid PulseAudio Stream!");
 
+        if (pa_simple_write(p, buf, length / 2, &error) < 0) {
+            fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
+            return -1;
+        }
+        offset = length / 2;
+
         // Register write callback
         pa_stream_set_write_callback(p->stream, buf_circ_write_cb, NULL);
     }
@@ -155,7 +163,10 @@ bool outputStream_sync(const streamId id, const bool bufChanged)
         return false;
     }
 
-    running = false;
+    if (buf_mode == BUF_LINEAR)
+    {
+        running = false;
+    }
 
     return true;
 }
