@@ -83,11 +83,11 @@ void _ui_drawBankChannel()
         bankHdr_t bank_hdr = { 0 };
         cps_readBankHeader(&bank_hdr, last_state.bank);
 	    snprintf(buf, 16, "%s: %.13s",
-                 currentLanguage->bank,
+                 currentLanguage->banks,
                  bank_hdr.name);
     } else {
 	    snprintf(buf, 16, "%s: %.13s",
-                 currentLanguage->bank,
+                 currentLanguage->banks,
                  currentLanguage->allChannels);
     }
 	gfx_print(layout.line1_pos, layout.line1_font, TEXT_ALIGN_LEFT,

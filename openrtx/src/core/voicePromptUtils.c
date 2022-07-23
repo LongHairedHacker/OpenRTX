@@ -427,7 +427,7 @@ void announceBank(uint16_t bank, VoicePromptQueueFlags_T flags)
 {
     vpInitIfNeeded(flags);
     if (flags & vpqIncludeDescriptions)
-        vpQueueStringTableEntry(&currentLanguage->bank);
+        vpQueueStringTableEntry(&currentLanguage->banks);
 
     if (state.bank_enabled)
     {

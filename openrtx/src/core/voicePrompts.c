@@ -123,7 +123,7 @@ void vpCacheInit(void)
     if (vpCheckHeader((uint32_t*)&header))
     {                            // read in the TOC.
         fread((void*)&tableOfContents, sizeof(tableOfContents), 1, voice_prompt_file);
-vpDataOffset = ftell(voice_prompt_file);
+        vpDataOffset = ftell(voice_prompt_file);
         vpDataIsLoaded = vpDataOffset == (sizeof(voicePromptsDataHeader_t) + sizeof(tableOfContents));
     }
     if (vpDataIsLoaded)
@@ -136,6 +136,8 @@ vpDataOffset = ftell(voice_prompt_file);
        // loaded.
         if (state.settings.vpLevel > vpBeep) state.settings.vpLevel = vpBeep;
     }
+    // TODO: Move this somewhere else for compatibility with M17
+    codec_init();
 }
 
 bool vpCheckHeader(uint32_t* bufferAddress)

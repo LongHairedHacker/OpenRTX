@@ -58,58 +58,57 @@ const char *display_timer_values[] =
 };
 
 bool DidSelectedMenuItemChange(char* menuName, char* menuValue)
-{// menu name can't be empty.
-	if (!menuName || !*menuName)
-		return false;
-	// If value is supplied it can't be empty but it does not have to be supplied.
-	if (menuValue && !*menuValue)
-		return false;
+{
+    // menu name can't be empty.
+    if (!menuName || !*menuName)
+        return false;
+    // If value is supplied it can't be empty but it does not have to be supplied.
+    if (menuValue && !*menuValue)
+        return false;
 
-	if (strcmp(menuName, priorSelectedMenuName) != 0)
-	{
-		strcpy(priorSelectedMenuName, menuName);
-		if (menuValue)
-			strcpy(priorSelectedMenuValue, menuValue);
-		else
-			*priorSelectedMenuValue = '\0'; // reset it since we've changed menu item.
+    if (strcmp(menuName, priorSelectedMenuName) != 0)
+    {
+        strcpy(priorSelectedMenuName, menuName);
+        if (menuValue)
+            strcpy(priorSelectedMenuValue, menuValue);
+        else
+            *priorSelectedMenuValue = '\0'; // reset it since we've changed menu item.
+        return true;
+    }
 
-		return true;
-	}
+    if (menuValue && strcmp(menuValue, priorSelectedMenuValue) != 0)
+    {
+        strcpy(priorSelectedMenuValue, menuValue);
+        return true;
+    }
 
-	if (menuValue && strcmp(menuValue, priorSelectedMenuValue) != 0)
-	{
-		strcpy(priorSelectedMenuValue, menuValue);
-		return true;
-	}
-
-	return false;
+    return false;
 }
 
 static void announceMenuItemIfNeeded(char* name, char* value)
 {
-	if (state.settings.vpLevel <= vpLow)
-		return;
+    if (state.settings.vpLevel <= vpLow)
+        return;
 
-	if (!name || !*name)
-		return;
+    if (!name || !*name)
+        return;
 
-	if (!DidSelectedMenuItemChange(name, value))
-		return;
+    if (!DidSelectedMenuItemChange(name, value))
+        return;
+    // See if we are already in the middle of speaking a menu item.
+    // e.g. when changing a value with left or right, we don't want to repeat
+    // the prompt if arrowing rapidly.
+    bool voicePromptWasPlaying=vpIsPlaying();
+    // Stop any prompt in progress and clear the buffer.
+    vpInit();
+    // If no value is supplied, or, no prompt is in progress, announce the name.
+    if (!voicePromptWasPlaying || !value || !*value)
+        announceText(name, vpqDefault);
 
-	// See if we are already in the middle of speaking a menu item.
-	// e.g. when changing a value with left or right, we don't want to repeat the
-	// prompt if arrowing rapidly.
-	bool voicePromptWasPlaying=vpIsPlaying();
-	// Stop any prompt in progress and clear the buffer.
-	vpInit();
-	// If no value is supplied, or, no prompt is in progress, announce the name.
-	if (!voicePromptWasPlaying || !value || !*value)
-		announceText(name, vpqDefault);
+    if (value && *value)
+        announceText(value, vpqDefault);
 
-	if (value && *value)
-		announceText(value, vpqDefault);
-
-	vpPlay();
+    vpPlay();
 }
 
 void _ui_drawMenuList(uint8_t selected, int (*getCurrentEntry)(char *buf, uint8_t max_len, uint8_t index))
@@ -136,7 +135,7 @@ void _ui_drawMenuList(uint8_t selected, int (*getCurrentEntry)(char *buf, uint8_
                 // Draw rectangle under selected item, compensating for text height
                 point_t rect_pos = {0, pos.y - layout.menu_h + 3};
                 gfx_drawRect(rect_pos, SCREEN_WIDTH, layout.menu_h, color_white, true);
-				announceMenuItemIfNeeded(entry_buf, NULL);
+                announceMenuItemIfNeeded(entry_buf, NULL);
             }
             gfx_print(pos, layout.menu_font, TEXT_ALIGN_LEFT, text_color, entry_buf);
             pos.y += layout.menu_h;
@@ -180,11 +179,13 @@ void _ui_drawMenuListValue(ui_state_t* ui_state, uint8_t selected,
                 }
                 point_t rect_pos = {0, pos.y - layout.menu_h + 3};
                 gfx_drawRect(rect_pos, SCREEN_WIDTH, layout.menu_h, color_white, full_rect);
-				if (!ui_state->edit_mode)
-				{// If in edit mode, only want to speak the char being entered,,
-			//not repeat the entire display.
-					announceMenuItemIfNeeded(entry_buf, value_buf);
-				}
+
+                // If in edit mode, only want to speak the char being entered,
+                // do not repeat the entire display.
+                if (!ui_state->edit_mode)
+                {
+                    announceMenuItemIfNeeded(entry_buf, value_buf);
+                }
             }
             gfx_print(pos, layout.menu_font, TEXT_ALIGN_LEFT, text_color, entry_buf);
             gfx_print(pos, layout.menu_font, TEXT_ALIGN_RIGHT, text_color, value_buf);
@@ -282,27 +283,27 @@ int _ui_getVoiceValueName(char *buf, uint8_t max_len, uint8_t index)
     switch(index)
     {
         case VP_LEVEL:
-		{
+        {
             value = last_state.settings.vpLevel;
-			switch (value)
-			{
-				case vpNone:
-				    snprintf(buf, max_len, "%s", currentLanguage->off);
-					break;
-				case vpBeep:
-				    snprintf(buf, max_len, "%s", currentLanguage->beep);
-					break;
-				default:
-								    snprintf(buf, max_len, "%d", (value-vpBeep));
-					break;
-			}
+            switch (value)
+            {
+                case vpNone:
+                    snprintf(buf, max_len, "%s", currentLanguage->off);
+                    break;
+                case vpBeep:
+                    snprintf(buf, max_len, "%s", currentLanguage->beep);
+                    break;
+                default:
+                                    snprintf(buf, max_len, "%d", (value-vpBeep));
+                    break;
+            }
             break;
-		}
+        }
         case VP_PHONETIC:
-			snprintf(buf, max_len, "%s", last_state.settings.vpPhoneticSpell ? currentLanguage->on : currentLanguage->off);
+            snprintf(buf, max_len, "%s", last_state.settings.vpPhoneticSpell ? currentLanguage->on : currentLanguage->off);
             break;
     }
-	return 0;
+    return 0;
 }
 
 int _ui_getBackupRestoreEntryName(char *buf, uint8_t max_len, uint8_t index)
@@ -413,7 +414,7 @@ void _ui_drawMenuBank(ui_state_t* ui_state)
     gfx_clearScreen();
     // Print "Bank" on top bar
     gfx_print(layout.top_pos, layout.top_font, TEXT_ALIGN_CENTER,
-              color_white, currentLanguage->bank);
+              color_white, currentLanguage->banks);
     // Print bank entries
     _ui_drawMenuList(ui_state->menu_selected, _ui_getBankName);
 }
@@ -595,9 +596,9 @@ void _ui_drawMenuRestore(ui_state_t* ui_state)
     gfx_print(line, FONT_SIZE_8PT, TEXT_ALIGN_CENTER,
               color_white, currentLanguage->pressPTTToStart);
 
-	announceRestoreScreen();
-	if (!platform_getPttStatus())
-		return;
+    announceRestoreScreen();
+    if (!platform_getPttStatus())
+        return;
 
     state.devStatus      = DATATRANSFER;
     state.restore_eflash = true;
