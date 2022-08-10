@@ -47,7 +47,7 @@ void platform_init()
 
     #ifndef RUNNING_TESTSUITE
     gpio_setMode(PWR_SW, OUTPUT);
-    gpio_setPin(PWR_SW);
+//     gpio_setPin(PWR_SW);
     #endif
 
     /*

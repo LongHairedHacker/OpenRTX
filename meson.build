@@ -75,7 +75,8 @@ if get_option('test') != ''
   main_src += 'tests/platform/'+get_option('test')+'.c'
   def      += {'RUNNING_TESTSUITE' : ''}
 else
-  main_src += 'openrtx/src/main.c'
+#   main_src += 'openrtx/src/main.c'
+  main_src += ['tests/platform/audio_test.cpp', 'tests/platform/audio.c']
 endif
 
 ##

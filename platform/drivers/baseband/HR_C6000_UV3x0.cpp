@@ -111,6 +111,11 @@ void HR_Cx000< M >::init()
     writeReg(M::CONFIG, 0x25, 0x0E);    // Undocumented register
     writeReg(M::CONFIG, 0x26, 0xFD);    // Undocumented register
     writeReg(M::CONFIG, 0x64, 0x00);    // Undocumented register
+
+    writeReg(M::CONFIG, 0x0D, 0x10);
+
+    writeReg(M::CONFIG, 0x32, 0x02);
+    writeReg(M::CONFIG, 0x33, 0xFF);
 }
 
 template< class M >
@@ -189,7 +194,7 @@ void HR_Cx000< M >::fmMode()
     writeReg(M::CONFIG, 0x11, 0x80);    // Local channel mode
     writeReg(M::CONFIG, 0xE0, 0xC9);    // Codec enabled, LineIn1, LineOut2, I2S slave mode
 
-    writeReg(M::CONFIG, 0x37, 0x81);    // DAC gain
+    writeReg(M::CONFIG, 0x37, 0x00);    // DAC gain
 }
 
 template< class M >

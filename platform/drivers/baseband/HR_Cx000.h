@@ -210,6 +210,17 @@ public:
         return readReg(M::CONFIG, reg);
     }
 
+    inline void sendAudio(const uint8_t *audio)
+    {
+        ScopedChipSelect cs;
+        (void) uSpi_sendRecv(0x03);
+        (void) uSpi_sendRecv(0x00);
+        for(size_t i = 0; i < 64; i++)
+        {
+            (void) uSpi_sendRecv(audio[i]);
+        }
+    }
+
 private:
 
     /**
