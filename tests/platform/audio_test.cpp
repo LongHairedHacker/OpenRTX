@@ -26,11 +26,11 @@
 #include <interfaces/audio_stream.h>
 #include <interfaces/gpio.h>
 #include <interfaces/platform.h>
-#include <HR_C6000.h>
+#include <HR_C5000.h>
 #include <hwconfig.h>
 #include <cstring>
 
-HR_C6000& c6000 = HR_C6000::instance();
+HR_C5000& c5000 = HR_C5000::instance();
 
 extern "C"
 {
@@ -52,52 +52,50 @@ void fillData()
         if(audio_pos >= 160582) audio_pos = 0;
     }
 
-    c6000.sendAudio(sound);
+    c5000.sendAudio(sound);
 }
 
-// void TIM7_IRQHandler()
-// {
-//     TIM7->SR = 0;
-//
-//     uint8_t reg = c6000.readCfgRegister(0x88);
-//     if((reg & 0x01) == 0)
-//     {
-//         fillData();
-//     }
-// }
 
 int main()
 {
     platform_init();
-    audio_enableAmp();
 
-    c6000.init();
-    c6000.fmMode();
-    c6000.writeCfgRegister(0x06, 0x22);
+    gpio_setMode(SPK_MUTE, OUTPUT);
+    gpio_clearPin(SPK_MUTE);
 
-    gpio_setMode(RX_AUDIO_MUX, OUTPUT);
-    gpio_setPin(RX_AUDIO_MUX);
+    gpio_setMode(AUDIO_AMP_EN, OUTPUT);
+    gpio_setPin(AUDIO_AMP_EN);
 
-//     RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
-//
-//     TIM7->PSC = 0;
-//     TIM7->CNT = 0;
-//     TIM7->ARR = 10499;
-//     TIM7->EGR  = TIM_EGR_UG;
-//     TIM7->DIER = TIM_DIER_UIE;
-//     TIM7->CR1  = TIM_CR1_CEN;
-//
-//     NVIC_ClearPendingIRQ(TIM7_IRQn);
-//     NVIC_SetPriority(TIM7_IRQn, 3);
-//     NVIC_EnableIRQ(TIM7_IRQn);
+    gpio_setMode(DMR_SW, OUTPUT);
+    gpio_setPin(DMR_SW);
+
+
+    c5000.init();
+    c5000.fmMode();
+
+    // LineOutEn = 1
+    c5000.writeCfgRegister(0x0E, (1<<3));
+
+    // HPoutEn = 1, HPOutVol = 6dB
+    // c5000.writeCfgRegister(0x0E, (1<<3) | (1 << 5) | (1 << 4));
+
+
+    platform_ledOff(GREEN);
+    platform_ledOff(RED);
+
+    // OpenMusic = 1, DMRFrom = input from SPI1
+    c5000.writeCfgRegister(0x06, 0x02);
 
     while(1)
     {
         unsigned long long now = getTick();
-        uint8_t reg = c6000.readCfgRegister(0x88);
+        uint8_t reg = c5000.readCfgRegister(0x88);
         if((reg & 0x01) == 0)
         {
+            platform_ledOn(GREEN);
             fillData();
+        } else {
+            platform_ledOn(RED);
         }
 
         now += 4;
